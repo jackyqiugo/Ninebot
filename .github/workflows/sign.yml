@@ -1,9 +1,9 @@
 name: 九号出行自动签到
 
-# 触发条件：每天早上8点运行 + 允许手动触发
+# 触发窗口：每天北京时间 08:00，签到前随机延迟 5~55 分钟 + 允许手动触发
 on:
   schedule:
-    - cron: '0 0 * * *'  # UTC时间0点 = 北京时间8点（根据需要调整）
+    - cron: '0 0 * * *'  # UTC时间0点 = 北京时间8点，实际签到会随机延迟
   workflow_dispatch:
 
 jobs:
@@ -20,6 +20,13 @@ jobs:
 
       - name: 安装依赖
         run: npm install
+
+      - name: 随机延迟
+        shell: bash
+        run: |
+          delay=$((RANDOM % 3001 + 300))
+          echo "本次随机延迟 $delay 秒"
+          sleep "$delay"
 
       - name: 执行签到
         run: npm start
