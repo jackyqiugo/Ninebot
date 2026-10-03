@@ -8,11 +8,11 @@ export async function notifyFailure({ sendKey, runUrl, testNotification = false 
         throw new Error("未配置 SERVERCHAN_SENDKEY，无法发送微信提醒");
     }
 
-    const title = testNotification ? "九号签到微信通知测试" : "九号自动签到失败，请及时补签";
+    const title = testNotification ? "九号签到微信通知测试" : "无法确认今日签到状态，请检查";
     const time = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
     const message = testNotification
         ? "这是一条测试通知。收到后表示微信通知渠道已连通。"
-        : "本次自动签到流程失败，今天可能尚未签到。请尽快打开九号 App 确认今日签到状态，未签到请在当天补签。";
+        : "本次自动任务未能确认今日签到状态，不代表今天未签到。请打开九号 App 检查：已签到可忽略此提醒；确实未签到，请在当天完成签到。";
     const body = new URLSearchParams({
         title,
         desp: `${message}\n\n北京时间：${time}\n\n[查看 GitHub 运行记录](${runUrl})`

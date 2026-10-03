@@ -15,7 +15,7 @@ function accepted() {
     return { ok: true, status: 200, json: async () => ({ code: 0 }) };
 }
 
-test("失败通知通过 Server酱发送补签提醒和运行记录", async () => {
+test("失败通知说明状态未确认，已签到可忽略，并附运行记录", async () => {
     const notifyFailure = await loadNotifier();
     let request;
     await notifyFailure(options, {
@@ -27,8 +27,10 @@ test("失败通知通过 Server酱发送补签提醒和运行记录", async () =
     assert.equal(request.url, "https://sctapi.ftqq.com/SCTtestkey.send");
     assert.equal(request.config.method, "POST");
     const body = new URLSearchParams(request.config.body);
-    assert.match(body.get("title"), /失败/);
-    assert.match(body.get("desp"), /补签/);
+    assert.equal(body.get("title"), "无法确认今日签到状态，请检查");
+    assert.match(body.get("desp"), /不代表今天未签到/);
+    assert.match(body.get("desp"), /已签到可忽略/);
+    assert.match(body.get("desp"), /确实未签到，请在当天完成签到/);
     assert.ok(body.get("desp").includes(options.runUrl));
     assert.ok(!body.get("desp").includes(options.sendKey));
 });
