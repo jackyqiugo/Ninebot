@@ -39,9 +39,9 @@ class NineBot {
 
         // 请求配置
         this.requestConfig = {
-            timeout: 10000,
-            retry: 3,
-            retryDelay: 2000
+            timeout: 30000,
+            retry: 5,
+            retryDelay: 5000
         };
     }
 
@@ -66,10 +66,12 @@ class NineBot {
             } catch (error) {
                 attempts++;
                 console.error(`[${this.name}] 请求失败 (${attempts}/${maxAttempts}):`, error.message);
-                if (attempts === maxAttempts) {
+                if (attempts === maxAttempts || [401, 403].includes(error.response?.status)) {
                     throw error;
                 }
-                await new Promise(resolve => setTimeout(resolve, this.requestConfig.retryDelay));
+                const delay = Math.min(this.requestConfig.retryDelay * 2 ** (attempts - 1), 30000);
+                console.log(`[${this.name}] 等待 ${delay / 1000} 秒后重试`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
     }
@@ -189,15 +191,19 @@ class NineBot {
                             this.msg.push({ name: "签到结果", value: "签到成功，但获取最新状态失败" });
                         }
                     }
+                    return signSuccess;
                 } else {
                     console.log(`[${this.name}] 今日已签到，无需重复签到`);
+                    return true;
                 }
             } else {
                 this.msg.push({ name: "验证结果", value: errInfo });
+                return false;
             }
         } catch (error) {
             this.msg.push({ name: "执行结果", value: `执行异常: ${error.message}` });
             console.error(`[${this.name}] 执行异常:`, error);
+            return false;
         } finally {
             console.log(`[${this.name}] 任务执行完成`);
         }
@@ -295,6 +301,7 @@ async function init() {
             }));
         } catch (e) {
             console.error("NINEBOT_ACCOUNTS 格式错误:", e.message);
+            process.exitCode = 1;
             return;
         }
     }
@@ -307,6 +314,13 @@ async function init() {
         });
     } else {
         console.error("未配置任何账号信息");
+        process.exitCode = 1;
+        return;
+    }
+
+    if (accounts.length === 0) {
+        console.error("账号列表为空");
+        process.exitCode = 1;
         return;
     }
 
@@ -316,10 +330,10 @@ async function init() {
         console.log(`\n===== 开始处理账号: ${account.name} =====`);
         try {
             const bot = new NineBot(account.deviceId, account.authorization, account.name);
-            await bot.run();
+            const success = await bot.run();
             allResults.push({
                 name: account.name,
-                success: bot.logs.includes("签到成功") || bot.logs.includes("已签到"),
+                success,
                 logs: bot.logs
             });
         } catch (e) {
@@ -338,9 +352,17 @@ async function init() {
         return `${status} ${acc.name}\n${acc.logs.replace(/\n/g, "\n  ")}`;
     }).join("\n\n");
 
+    console.log(`${title}\n${message}`);
+    if (allResults.some(acc => !acc.success)) {
+        process.exitCode = 1;
+    }
+
     // 发送Bark通知
     await sendBarkNotification(title, message);
 }
 
 // 启动执行
-init();
+init().catch(error => {
+    console.error("签到任务异常:", error.message);
+    process.exitCode = 1;
+});

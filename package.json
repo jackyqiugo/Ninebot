@@ -5,7 +5,8 @@
     "description": "九号出行自动签到脚本（支持GitHub Actions和青龙面板）",
     "main": "sign_ninebot.js",
     "scripts": {
-        "start": "node sign_ninebot.js"
+        "start": "node sign_ninebot.js",
+        "test": "node --test test/sign_ninebot.test.js"
     },
     "dependencies": {
         "axios": "^1.6.2",

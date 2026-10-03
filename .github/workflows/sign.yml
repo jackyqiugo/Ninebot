@@ -21,6 +21,9 @@ jobs:
       - name: 安装依赖
         run: npm install
 
+      - name: 验证签到逻辑
+        run: npm test
+
       - name: 随机延迟
         if: github.event_name == 'schedule'
         shell: bash
