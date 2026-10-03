@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: '0 0 * * *'  # UTC时间0点 = 北京时间8点，实际签到会随机延迟
   workflow_dispatch:
+    inputs:
+      test_notification:
+        description: '仅测试微信通知，不执行签到'
+        type: boolean
+        default: false
 
 jobs:
   sign:
@@ -33,6 +38,7 @@ jobs:
           sleep "$delay"
 
       - name: 执行签到
+        if: inputs.test_notification != true
         run: npm start
         env:
           # 从GitHub Secrets读取环境变量（用户需自行配置）
@@ -45,3 +51,11 @@ jobs:
           BARK_ICON: ${{ secrets.BARK_ICON }}
           BARK_URL: ${{ secrets.BARK_URL }}
           # 其他Bark参数按需添加
+
+      - name: 失败时发送微信提醒
+        if: failure() || inputs.test_notification
+        run: node notify_failure.js
+        env:
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          SIGN_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NOTIFICATION_TEST: ${{ inputs.test_notification && '1' || '0' }}
